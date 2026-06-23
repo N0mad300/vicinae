@@ -8,6 +8,7 @@
 #include <qlogging.h>
 #include <qstylehints.h>
 #include <string_view>
+#include <type_traits>
 #include <QGuiApplication>
 #include <utility>
 #include "utils.hpp"
@@ -50,15 +51,26 @@ static constexpr const char *TOP_COMMENT =
 // Learn more about configuration at https://docs.vicinae.com/config)";
 
 template <typename T> T static merge(const auto &v1, const auto &v2) {
+  auto fallback = [&]() -> T {
+    if constexpr (std::is_convertible_v<std::decay_t<decltype(v1)>, T>) {
+      return v1;
+    } else {
+      return {};
+    }
+  };
+
   std::string buf;
   if (auto error = glz::write_json(glz::merge{v1, v2}, buf)) {
-    std::cerr << "Failed to merge " << glz::format_error(error);
-    // todo: do smth about that
+    qWarning() << "Failed to merge" << glz::format_error(error);
+    return fallback();
   }
+
   T cfg;
-  if (auto error = glz::read_json(cfg, buf)) {
-    qWarning() << "Failed to read merged " << glz::format_error(error);
+  if (auto error = glz::read<glz::opts{.error_on_unknown_keys = false}>(cfg, buf)) {
+    qWarning() << "Failed to read merged" << glz::format_error(error);
+    return fallback();
   }
+
   return cfg;
 }
 
@@ -161,7 +173,7 @@ bool Manager::mergeWithUser(const Partial<ConfigValue> &patch) {
     return false;
   }
 
-  if (auto error = glz::read_json(user, buf)) {
+  if (auto error = glz::read<glz::opts{.error_on_unknown_keys = false}>(user, buf)) {
     qWarning() << "Failed to read merged partials: config changes haven't been applied";
     return false;
   }
@@ -260,8 +272,8 @@ Manager::PartialConfigResult Manager::load(const std::filesystem::path &path, co
         return std::unexpected(std::format("Failed to import file \"{}\": {}", importPath, imported.error()));
       }
 
-      if (override) return merge<Partial<ConfigValue>>(cfg, imported);
-      return merge<Partial<ConfigValue>>(imported, cfg);
+      if (override) return merge<Partial<ConfigValue>>(cfg, imported.value());
+      return merge<Partial<ConfigValue>>(imported.value(), cfg);
     } else {
       qWarning().nospace() << "Imported config file not found: " << importPath;
       return cfg;
@@ -340,5 +352,7 @@ void Manager::prunePartial(Partial<ConfigValue> &user) {
 }
 
 }; // namespace config
+
+
 
 

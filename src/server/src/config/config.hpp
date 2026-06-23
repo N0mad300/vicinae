@@ -78,8 +78,8 @@ template <> struct Partial<BlurConfig> {
 };
 
 struct Size {
-  int width;
-  int height;
+  int width = 770;
+  int height = 480;
 };
 
 template <> struct Partial<Size> {
@@ -102,7 +102,7 @@ template <> struct Partial<WindowCSD> {
 };
 
 struct WindowCompactMode {
-  bool enabled;
+  bool enabled = false;
 };
 
 template <> struct Partial<WindowCompactMode> {
@@ -110,10 +110,10 @@ template <> struct Partial<WindowCompactMode> {
 };
 
 struct WindowConfig {
-  float opacity;
+  float opacity = 1.0f;
   WindowCSD clientSideDecorations;
   Size size;
-  std::string screen;
+  std::string screen = "auto";
   BlurConfig blur;
   WindowCompactMode compactMode;
   LayerShellConfig layerShell;

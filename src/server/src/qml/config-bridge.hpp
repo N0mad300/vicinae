@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "config/config.hpp"
 #include "service-registry.hpp"
 #include <QColor>
@@ -27,7 +28,9 @@ public:
             [this] { emit changed(); });
   }
 
-  qreal windowOpacity() const { return cfg().launcherWindow.opacity; }
+  qreal windowOpacity() const {
+    return std::clamp<qreal>(cfg().launcherWindow.opacity, 0.0, 1.0);
+  }
 
   int borderWidth() const {
     auto &csd = cfg().launcherWindow.clientSideDecorations;
@@ -52,7 +55,7 @@ public:
   bool blurEnabled() const { return cfg().launcherWindow.blur.enabled; }
 
   Q_INVOKABLE static QColor withAlpha(const QColor &c, qreal alpha) {
-    return QColor::fromRgbF(c.redF(), c.greenF(), c.blueF(), alpha);
+    return QColor::fromRgbF(c.redF(), c.greenF(), c.blueF(), std::clamp<qreal>(alpha, 0.0, 1.0));
   }
 
 private:
