@@ -1,21 +1,33 @@
 #include "vicinae.hpp"
+#include <QProcessEnvironment>
+#include <QStandardPaths>
 #include <qcoreapplication.h>
 #include <qlogging.h>
 #include <qprocess.h>
-#include <QProcessEnvironment>
 #include <ranges>
 #include <set>
 
-#ifndef Q_OS_MACOS
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
 #include "xdgpp/env/env.hpp"
 #endif
 
 namespace fs = std::filesystem;
 
+#ifdef Q_OS_WIN
+static fs::path writableLocation(QStandardPaths::StandardLocation location, fs::path fallback) {
+  auto path = QStandardPaths::writableLocation(location);
+  if (path.isEmpty()) return fallback;
+  return path.toStdString();
+}
+#endif
+
 fs::path Omnicast::runtimeDir() {
 #ifdef Q_OS_MACOS
   if (const char *t = std::getenv("TMPDIR")) return fs::path(t) / "vicinae";
   return "/tmp/vicinae";
+#elif defined(Q_OS_WIN)
+  auto base = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+  return fs::path(base.isEmpty() ? "." : base.toStdString()) / "vicinae";
 #else
   return fs::path(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation).toStdString()) /
          "vicinae";
@@ -26,6 +38,8 @@ fs::path Omnicast::dataDir() {
 #ifdef Q_OS_MACOS
   return fs::path(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation).toStdString()) /
          "vicinae";
+#elif defined(Q_OS_WIN)
+  return writableLocation(QStandardPaths::AppDataLocation, runtimeDir() / "data");
 #else
   return xdgpp::dataHome() / "vicinae";
 #endif
@@ -34,6 +48,8 @@ fs::path Omnicast::dataDir() {
 fs::path Omnicast::configDir() {
 #ifdef Q_OS_MACOS
   return dataDir();
+#elif defined(Q_OS_WIN)
+  return writableLocation(QStandardPaths::AppConfigLocation, dataDir());
 #else
   return xdgpp::configHome() / "vicinae";
 #endif
@@ -42,6 +58,8 @@ fs::path Omnicast::configDir() {
 fs::path Omnicast::stateDir() {
 #ifdef Q_OS_MACOS
   return dataDir();
+#elif defined(Q_OS_WIN)
+  return dataDir() / "state";
 #else
   return xdgpp::stateHome() / "vicinae";
 #endif
@@ -61,6 +79,8 @@ std::vector<fs::path> Omnicast::systemDataDirs() {
   std::vector<fs::path> paths;
 #ifdef Q_OS_MACOS
   if (auto bundle = bundleResourceDir(); !bundle.empty()) { paths.emplace_back(std::move(bundle)); }
+#elif defined(Q_OS_WIN)
+  return paths;
 #else
   auto const dd = xdgpp::dataDirs();
   paths.reserve(dd.size());
@@ -85,7 +105,13 @@ std::vector<fs::path> Omnicast::dataSearchPaths(std::string_view subdir) {
   return paths;
 }
 
-fs::path Omnicast::commandSocketPath() { return runtimeDir() / "vicinae.sock"; }
+fs::path Omnicast::commandSocketPath() {
+#ifdef Q_OS_WIN
+  return "vicinae";
+#else
+  return runtimeDir() / "vicinae.sock";
+#endif
+}
 fs::path Omnicast::pidFile() { return runtimeDir() / "vicinae.pid"; }
 
 void Omnicast::ensureDirectories() {
@@ -104,7 +130,13 @@ std::vector<fs::path> Omnicast::systemPaths() {
   std::set<fs::path> seen;
   std::vector<fs::path> paths;
 
-  for (const auto &part : std::views::split(std::string_view(path), std::string_view(":"))) {
+#ifdef Q_OS_WIN
+  constexpr std::string_view separator = ";";
+#else
+  constexpr std::string_view separator = ":";
+#endif
+
+  for (const auto &part : std::views::split(std::string_view(path), separator)) {
     fs::path const path = std::string_view(part.begin(), part.end());
 
     if (seen.contains(path)) continue;

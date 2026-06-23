@@ -132,7 +132,7 @@ void CalcHistoryViewHost::applyGroupedData(CalculatorService::GroupedRecordList 
 
 void CalcHistoryViewHost::startCalculator() {
   if (m_calcWatcher.isRunning()) {
-    m_calc->backend()->abort();
+    if (auto *backend = m_calc->backend()) { backend->abort(); }
     m_calcWatcher.waitForFinished();
   }
 

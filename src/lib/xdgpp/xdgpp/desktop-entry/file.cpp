@@ -17,7 +17,7 @@ DesktopFile DesktopFile::fromFile(const std::filesystem::path &file,
 }
 
 std::string DesktopFile::relativeId(const std::filesystem::path &file, const std::filesystem::path &appDir) {
-  std::string id = file.lexically_relative(appDir);
+  std::string id = file.lexically_relative(appDir).string();
   auto normalize = [](char c) { return c == '/' ? '.' : c; };
   std::ranges::transform(id, id.begin(), normalize);
 

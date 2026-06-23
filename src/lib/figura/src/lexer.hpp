@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string_view>
 
-enum class TokenType {
+enum class FiguraTokenType {
   Identifier,
   Service,
   Method,
@@ -28,11 +28,11 @@ enum class TokenType {
 };
 
 struct Token {
-  TokenType type;
+  FiguraTokenType type;
   std::string_view data;
 
   std::string_view typeName() const {
-    using T = TokenType;
+    using T = FiguraTokenType;
 
     switch (type) {
     case T::Identifier:
@@ -84,7 +84,7 @@ public:
   explicit Lexer(std::string_view data) : m_data(data) {}
 
   static Token tryParseToken(std::string_view word) {
-    using T = TokenType;
+    using T = FiguraTokenType;
 
     if (word == "struct") { return Token(T::Struct); }
     if (word == "enum") { return Token(T::Enum); }
@@ -155,31 +155,31 @@ public:
         } else if (!std::isspace(c)) {
           if (c == '{') {
             ++cursor;
-            return Token(TokenType::LBrace, view);
+            return Token(FiguraTokenType::LBrace, view);
           }
           if (c == '}') {
             ++cursor;
-            return Token(TokenType::RBrace, view);
+            return Token(FiguraTokenType::RBrace, view);
           }
           if (c == '(') {
             ++cursor;
-            return Token(TokenType::LParen, view);
+            return Token(FiguraTokenType::LParen, view);
           }
           if (c == ')') {
             ++cursor;
-            return Token(TokenType::RParen, view);
+            return Token(FiguraTokenType::RParen, view);
           }
           if (c == '[') {
             ++cursor;
-            return Token(TokenType::LBracket, view);
+            return Token(FiguraTokenType::LBracket, view);
           }
           if (c == ']') {
             ++cursor;
-            return Token(TokenType::RBracket, view);
+            return Token(FiguraTokenType::RBracket, view);
           }
           if (c == '?') {
             ++cursor;
-            return Token(TokenType::QuestionMark, view);
+            return Token(FiguraTokenType::QuestionMark, view);
           }
 
           state = Operator;
@@ -223,7 +223,7 @@ public:
     return {};
   }
 
-  Token getNextOfTypeOrThrow(TokenType type, std::string_view reason = "unexpected token") {
+  Token getNextOfTypeOrThrow(FiguraTokenType type, std::string_view reason = "unexpected token") {
     auto tok = getNext();
     if (!tok) throw std::runtime_error("No more token");
     if (tok->type != type)

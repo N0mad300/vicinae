@@ -4,10 +4,15 @@
 namespace xdgpp {
 
 Locale Locale::system() {
-  setlocale(LC_MESSAGES, "");
-  const char *messagesLocale = setlocale(LC_MESSAGES, nullptr);
+#ifdef LC_MESSAGES
+  constexpr int category = LC_MESSAGES;
+#else
+  constexpr int category = LC_ALL;
+#endif
+  setlocale(category, "");
+  const char *messagesLocale = setlocale(category, nullptr);
 
-  return Locale::parse(messagesLocale);
+  return Locale::parse(messagesLocale ? messagesLocale : "");
 }
 
 bool Locale::matchesOnly(const Locale &rhs, int components) {

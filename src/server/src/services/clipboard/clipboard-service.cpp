@@ -4,14 +4,13 @@
 #include <numeric>
 #include <QGuiApplication>
 #include "services/app-service/abstract-app-db.hpp"
-#include "x11/x11-clipboard-server.hpp"
 #include <qclipboard.h>
 #include <qimagereader.h>
 #include <qlogging.h>
 #include <qmimedata.h>
 #include <qnamespace.h>
 #include <qstringview.h>
-#include <qt6keychain/keychain.h>
+#include <keychain.h>
 #include <QtConcurrent/QtConcurrent>
 #include <QFutureWatcher>
 #include <QBuffer>
@@ -22,13 +21,26 @@
 #include "services/clipboard/clipboard-db.hpp"
 #include "services/clipboard/clipboard-encrypter.hpp"
 #include "services/clipboard/clipboard-server.hpp"
-#include "services/clipboard/gnome/gnome-clipboard-server.hpp"
 #include "utils.hpp"
 #ifdef Q_OS_LINUX
 #include "data-control/data-control-clipboard-server.hpp"
+#include "services/clipboard/gnome/gnome-clipboard-server.hpp"
+#include "x11/x11-clipboard-server.hpp"
+#else
+#include "services/clipboard/qt/qt-clipboard-server.hpp"
 #endif
 
 namespace fs = std::filesystem;
+
+#ifndef Q_OS_LINUX
+namespace {
+class QtClipboardServer : public AbstractQtClipboardServer {
+public:
+  QString id() const override { return "qt"; }
+  bool isActivatable() const override { return true; }
+};
+} // namespace
+#endif
 
 /**
  * If any of these is found in a selection, we ignore the entire selection.
@@ -634,10 +646,12 @@ ClipboardService::ClipboardService(const std::filesystem::path &path) {
   {
     ClipboardServerFactory factory;
 
-    factory.registerServer<GnomeClipboardServer>();
 #ifdef Q_OS_LINUX
+    factory.registerServer<GnomeClipboardServer>();
     factory.registerServer<DataControlClipboardServer>();
     factory.registerServer<X11ClipboardServer>();
+#else
+    factory.registerServer<QtClipboardServer>();
 #endif
     m_clipboardServer = factory.createFirstActivatable();
     qInfo() << "Activated clipboard server" << m_clipboardServer->id();

@@ -219,7 +219,7 @@ bool RootSearchModel::tryAliasFastTrack() {
 
 void RootSearchModel::startCalculator() {
   if (m_calcWatcher.isRunning()) {
-    m_calculator->backend()->abort();
+    if (auto *backend = m_calculator->backend()) { backend->abort(); }
     m_calcWatcher.waitForFinished();
   }
 

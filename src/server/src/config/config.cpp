@@ -78,7 +78,7 @@ Manager::Manager(fs::path path) : m_userPath(std::move(path)) {
 
   m_defaultData = file.readAll().toStdString();
 
-  if (auto error = glz::read_jsonc(m_defaultConfig, m_defaultData)) {
+  if (auto error = glz::read<glz::opts{.comments = true, .error_on_unknown_keys = false}>(m_defaultConfig, m_defaultData)) {
     throw std::runtime_error(
         std::format("Failed to parse default config file: {}", glz::format_error(error)));
   }
@@ -104,7 +104,7 @@ Manager::Manager(fs::path path) : m_userPath(std::move(path)) {
 
   connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this](const QString &path) {
     m_fsDebounce.start();
-    m_watcher.addPath(m_userPath.c_str());
+    m_watcher.addPath(QString::fromStdString(m_userPath.string()));
   });
   connect(&m_fsDebounce, &QTimer::timeout, this, [this]() { reloadConfig(); });
 }
@@ -121,7 +121,7 @@ bool Manager::updateUser(const std::function<void(Partial<ConfigValue> &value)> 
   Partial<ConfigValue> user;
 
   if (auto error =
-          glz::read_file_jsonc<glz::opts{.error_on_unknown_keys = false}>(user, m_userPath.c_str(), buf)) {
+          glz::read_file_jsonc<glz::opts{.error_on_unknown_keys = false}>(user, m_userPath.string(), buf)) {
     qWarning() << "Failed to read user config as partial";
     return false;
   }
@@ -151,7 +151,7 @@ bool Manager::mergeWithUser(const Partial<ConfigValue> &patch) {
   Partial<ConfigValue> user;
 
   if (auto error =
-          glz::read_file_jsonc<glz::opts{.error_on_unknown_keys = false}>(user, m_userPath.c_str(), buf)) {
+          glz::read_file_jsonc<glz::opts{.error_on_unknown_keys = false}>(user, m_userPath.string(), buf)) {
     qWarning() << "Failed to read user config as partial, config changes haven't been applied.";
     return false;
   }
@@ -225,23 +225,23 @@ void Manager::initConfig() {
 
 std::filesystem::path Manager::resolvePath(const std::filesystem::path &path,
                                            const std::filesystem::path &cwd) {
-  std::string importPath = expandPath(path);
+  std::string importPath = expandPath(path).string();
 
-  if (!importPath.starts_with('/')) { importPath = cwd.parent_path() / importPath; }
+  if (!importPath.starts_with('/')) { importPath = (cwd.parent_path() / importPath).string(); }
 
   return std::filesystem::weakly_canonical(importPath);
 }
 
 Manager::PartialConfigResult Manager::load(const std::filesystem::path &path, const LoadingOptions &opts) {
-  m_watcher.addPath(path.c_str());
+  m_watcher.addPath(QString::fromStdString(path.string()));
 
   std::string buf;
   Partial<ConfigValue> cfg;
-  auto glzError = glz::read_file_jsonc<glz::opts{.error_on_unknown_keys = false}>(cfg, path.c_str(), buf);
+  auto glzError = glz::read_file_jsonc<glz::opts{.error_on_unknown_keys = false}>(cfg, path.string(), buf);
 
   if (glzError) {
     std::string glzErrMsg = glz::format_error(glzError);
-    return std::unexpected(std::format("Failed to read JSONC file at {}: {}", path.c_str(), glzErrMsg));
+    return std::unexpected(std::format("Failed to read JSONC file at {}: {}", path.string(), glzErrMsg));
   }
 
   auto importFile = [this, &opts](Partial<ConfigValue> &cfg, const std::string &importPath,
@@ -270,13 +270,13 @@ Manager::PartialConfigResult Manager::load(const std::filesystem::path &path, co
 
   if (opts.resolveImports) {
     for (const auto &imp : cfg.imports.value_or(std::vector<std::string>{})) {
-      auto result = importFile(cfg, resolvePath(imp, path), false);
+      auto result = importFile(cfg, resolvePath(imp, path).string(), false);
       if (!result) return result;
       cfg = std::move(result).value();
     }
 
     for (const auto &overridePath : m_envOverrides) {
-      auto result = importFile(cfg, resolvePath(overridePath, path), true);
+      auto result = importFile(cfg, resolvePath(overridePath, path).string(), true);
       if (!result) return result;
       cfg = std::move(result).value();
     }
@@ -340,3 +340,5 @@ void Manager::prunePartial(Partial<ConfigValue> &user) {
 }
 
 }; // namespace config
+
+

@@ -1,4 +1,11 @@
+#include <QtGlobal>
+#ifdef Q_OS_WIN
+#include <QProcess>
+#include <QString>
+#include <QStringList>
+#else
 #include <csignal>
+#endif
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -11,7 +18,13 @@
 namespace fs = std::filesystem;
 
 bool PidFile::kill() {
+#ifdef Q_OS_WIN
+  if (auto n = pid()) {
+    return QProcess::execute("taskkill", QStringList{"/PID", QString::number(*n), "/F"}) == 0;
+  }
+#else
   if (auto n = pid()) { return ::kill(*n, SIGINT) == 0; }
+#endif
 
   return false;
 }

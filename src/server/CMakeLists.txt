@@ -3,15 +3,20 @@ set(CMAKE_AUTORCC ON)
 set(LIBS)
 set(TARGET vicinae-server)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Network Svg DBus Concurrent Quick Qml GuiPrivate QuickDialogs2 QuickControls2 ShaderTools)
+set(QT_COMPONENTS Core Network Svg Concurrent Quick Qml GuiPrivate QuickDialogs2 QuickControls2 ShaderTools)
+if (NOT WIN32)
+	list(APPEND QT_COMPONENTS DBus)
+endif()
+
+find_package(Qt6 REQUIRED COMPONENTS ${QT_COMPONENTS})
 find_package(OpenSSL REQUIRED)
 
-if (USE_SYSTEM_KF6 AND NOT APPLE)
+if (VICINAE_ENABLE_KF6_SYNTAX_HIGHLIGHTING AND USE_SYSTEM_KF6 AND NOT APPLE)
 	find_package(KF6SyntaxHighlighting REQUIRED)
 endif()
 
 list(APPEND LIBS
-	Qt6::Network Qt6::Svg Qt6::DBus Qt6::Concurrent Qt6::Quick Qt6::Qml
+	Qt6::Network Qt6::Svg Qt6::Concurrent Qt6::Quick Qt6::Qml
 	Qt6::GuiPrivate # for deeper integration with wayland protocols, we need wl_surface
 	Qt6::QuickDialogs2 Qt6::QuickControls2
 	${CMARK_LIBRARY} ${CMARK_EXT_LIBRARY}
@@ -19,7 +24,6 @@ list(APPEND LIBS
 	OpenSSL::Crypto
 	qt6keychain
 	pugixml
-	KF6::SyntaxHighlighting
 	glaze::glaze
 	vicinae::xdgpp
 	vicinae::scriptcommand
@@ -29,6 +33,15 @@ list(APPEND LIBS
 	sqlcipher
 )
 
+if (NOT WIN32)
+	list(APPEND LIBS Qt6::DBus)
+endif()
+
+if (VICINAE_ENABLE_KF6_SYNTAX_HIGHLIGHTING)
+	list(APPEND LIBS KF6::SyntaxHighlighting)
+	add_compile_definitions(VICINAE_ENABLE_KF6_SYNTAX_HIGHLIGHTING=1)
+endif()
+
 if (UNIX AND NOT APPLE)
 	list(APPEND LIBS wayland-client)
 endif()
@@ -36,13 +49,16 @@ endif()
 
 set(ASSET_PATH ${CMAKE_CURRENT_SOURCE_DIR}/assets)
 set(EXTRA_PATH ${CMAKE_SOURCE_DIR}/extra)
+if (NOT TYPESCRIPT_EXTENSIONS AND NOT EXISTS "${CMAKE_BINARY_DIR}/extension-runtime.js")
+	file(WRITE "${CMAKE_BINARY_DIR}/extension-runtime.js" "")
+endif()
 configure_file(resources.qrc.in resources.qrc)
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
 	add_compile_definitions(LOCAL_THEME_DIR="${THEME_DIR}")
 endif()
 
-if (WAYLAND_LAYER_SHELL)
+if (WAYLAND_LAYER_SHELL AND UNIX AND NOT APPLE)
 	message(STATUS "Compiling with wayland layer shell support (for wlroots-like compositors)")
 	if (USE_SYSTEM_LAYER_SHELL)
 		find_package(LayerShellQt REQUIRED)
@@ -148,7 +164,6 @@ set(SRCS
 	src/services/clipboard/clipboard-db.cpp
 	src/services/clipboard/qt/qt-clipboard-server.hpp
 	src/services/clipboard/qt/qt-clipboard-server.cpp
-	src/services/clipboard/x11/x11-clipboard-server.hpp
 	src/services/clipboard/dummy/dummy-clipboard-server.hpp
 	src/services/clipboard/dummy/dummy-clipboard-server.cpp
 	src/services/clipboard/clipboard-server-factory.hpp
@@ -156,8 +171,6 @@ set(SRCS
 	src/services/clipboard/clipboard-service.hpp
 	src/services/clipboard/clipboard-encrypter.cpp
 	src/services/clipboard/clipboard-service.cpp
-	src/services/clipboard/gnome/gnome-clipboard-server.hpp
-	src/services/clipboard/gnome/gnome-clipboard-server.cpp
 
 	src/services/local-storage/local-storage-service.hpp
 	src/services/local-storage/local-storage.cpp
@@ -170,9 +183,6 @@ set(SRCS
 	src/services/toast/toast-service.hpp
 
 	# begin app-database
-	src/services/app-service/xdg/xdg-app-database.hpp
-	src/services/app-service/xdg/xdg-app-database.cpp
-	src/services/app-service/xdg/xdg-app.cpp
 	src/services/app-service/abstract-app-db.hpp
 	src/services/app-service/dummy-app-database.hpp
 
@@ -308,8 +318,6 @@ set(SRCS
 	src/services/file-chooser/file-chooser.cpp
 	src/services/file-chooser/file-chooser-service.hpp
 	src/services/file-chooser/file-chooser-service.cpp
-	src/services/file-chooser/xdp-file-chooser/xdp-file-chooser.hpp
-	src/services/file-chooser/xdp-file-chooser/xdp-file-chooser.cpp
 	src/services/root-item-manager/root-item-manager.hpp
 	src/services/root-item-manager/root-item-manager.cpp
 	src/services/root-item-manager/visit-tracker.cpp
@@ -383,14 +391,13 @@ set(SRCS
 	src/internal/zip/unzip.cpp
 	src/internal/data-uri/data-uri.cpp
 	src/internal/pid-file/pid-file.cpp
+	src/internal/os-release.cpp
 
 	src/ui/alert/alert.hpp
 	src/ui/alert/alert.cpp
 
 	src/ui/dialog/dialog.hpp
 	src/ui/dialog/dialog.cpp
-
-	src/internal/os-release.cpp
 
 	src/services/window-manager/window-manager.cpp
 
@@ -404,14 +411,8 @@ set(SRCS
 
 	src/internal/program-db/program-db.hpp
 	src/internal/program-db/program-db.cpp
-
-	src/services/power-manager/systemd/systemd-power-manager.cpp
 	src/services/power-manager/dummy-power-manager.hpp
-
-	src/services/desktop-notification/freedesktop/freedesktop-notification-client.cpp
 	src/services/desktop-notification/dummy-desktop-notification-client.hpp
-
-	src/services/audio-control/pactl/pactl-audio-control.cpp
 	src/services/audio-control/dummy-audio-control.hpp
 
 	src/config/config.hpp
@@ -589,6 +590,17 @@ set(SRCS
 if (UNIX AND NOT APPLE)
 	list(APPEND SRCS
 		src/services/calculator-service/soulver-core/soulver-core.cpp
+		src/services/app-service/xdg/xdg-app-database.hpp
+		src/services/app-service/xdg/xdg-app-database.cpp
+		src/services/app-service/xdg/xdg-app.cpp
+		src/services/file-chooser/xdp-file-chooser/xdp-file-chooser.hpp
+		src/services/file-chooser/xdp-file-chooser/xdp-file-chooser.cpp
+		src/services/power-manager/systemd/systemd-power-manager.cpp
+		src/services/desktop-notification/freedesktop/freedesktop-notification-client.cpp
+		src/services/audio-control/pactl/pactl-audio-control.cpp
+		src/services/clipboard/x11/x11-clipboard-server.hpp
+		src/services/clipboard/gnome/gnome-clipboard-server.hpp
+		src/services/clipboard/gnome/gnome-clipboard-server.cpp
 	)
 endif()
 
@@ -623,10 +635,14 @@ if (APPLE)
 		src/services/tray/macos/tray-service-macos.mm
 		src/services/paste/macos-paste-service.mm
 		PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
-else()
+elseif(UNIX AND NOT APPLE)
 	list(APPEND SRCS
 		src/services/app-runtime/linux/linux-app-runtime.hpp
 		src/services/app-runtime/linux/linux-app-runtime.cpp
+	)
+else()
+	list(APPEND SRCS
+		src/services/app-runtime/dummy-app-runtime.hpp
 	)
 endif()
 
@@ -650,15 +666,21 @@ list(APPEND SRCS
 	src/services/global-shortcuts/global-shortcut-service.cpp
 )
 
-list(APPEND LIBS qalculate)
 list(APPEND SRCS
-	src/services/calculator-service/qalculate/qalculate-backend.hpp
-	src/services/calculator-service/qalculate/qalculate-backend.cpp
+	src/services/calculator-service/dummy-calculator-backend.hpp
+	src/services/calculator-service/dummy-calculator-backend.cpp
 )
 
-if (TYPESCRIPT_EXTENSIONS)
-	list(APPEND SRCS ${CMAKE_CURRENT_BINARY_DIR}/resources.qrc)
+if (VICINAE_ENABLE_QALCULATE)
+	list(APPEND LIBS qalculate)
+	list(APPEND SRCS
+		src/services/calculator-service/qalculate/qalculate-backend.hpp
+		src/services/calculator-service/qalculate/qalculate-backend.cpp
+	)
+	add_compile_definitions(VICINAE_ENABLE_QALCULATE=1)
 endif()
+
+list(APPEND SRCS ${CMAKE_CURRENT_BINARY_DIR}/resources.qrc)
 
 if (UNIX AND NOT APPLE)
 	list(APPEND SRCS
@@ -914,15 +936,15 @@ set(VICINAE_QML_FILES
 	src/qml/qml/SettingsPreferenceForm.qml
 	src/qml/qml/MissingPreferenceView.qml
 	src/qml/qml/OAuthOverlayView.qml
-	src/qml/qml/HudWindow.qml
 )
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
 	list(APPEND VICINAE_QML_FILES src/qml/qml/ButtonShowcase.qml src/qml/qml/UIShowcase.qml)
 endif()
 
-if(WAYLAND_LAYER_SHELL)
+if(WAYLAND_LAYER_SHELL AND UNIX AND NOT APPLE)
 	list(APPEND VICINAE_QML_FILES src/qml/qml/LauncherWindowLayerShell.qml)
+	list(APPEND VICINAE_QML_FILES src/qml/qml/HudWindow.qml)
 endif()
 
 if(APPLE)
@@ -980,13 +1002,16 @@ qt6_add_shaders(${TARGET} "sourceblend_shaders"
 		src/qml/shaders/sourceblend.frag
 )
 
-if(Qt6_FOUND)
+if(Qt6_FOUND AND UNIX AND NOT APPLE)
 	qt_import_plugins(${TARGET}
         INCLUDE Qt6::QWaylandIntegrationPlugin
     )
 endif()
 
 target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/qml ${CMAKE_CURRENT_SOURCE_DIR}/src/qml/markdown)
+if (NOT USE_SYSTEM_QT_KEYCHAIN)
+	target_include_directories(${TARGET} PRIVATE ${CMAKE_BINARY_DIR}/_deps/qt-keychain-src ${CMAKE_BINARY_DIR}/_deps/qt-keychain-build)
+endif()
 target_link_libraries(${TARGET} PRIVATE ${LIBS})
 if(APPLE)
 	target_link_libraries(${TARGET} PRIVATE "-framework AppKit" "-framework UniformTypeIdentifiers" "-framework Carbon" "-framework CoreServices" "-framework ApplicationServices")
@@ -1016,7 +1041,7 @@ if(NOT APPLE)
 	)
 endif()
 
-if (BUILD_TESTS AND UNIX AND NOT APPLE)
+if (BUILD_TESTS AND UNIX AND NOT APPLE AND VICINAE_ENABLE_QALCULATE)
 	set(TEST_TARGET ${TARGET}-tests)
 	find_package(Catch2 3 REQUIRED)
 	add_executable(${TEST_TARGET}
@@ -1031,3 +1056,5 @@ if (BUILD_TESTS AND UNIX AND NOT APPLE)
 	target_link_libraries(${TEST_TARGET} PRIVATE Catch2::Catch2WithMain Qt6::Core Qt6::Gui)
 	target_compile_features(${TEST_TARGET} PUBLIC cxx_std_23)
 endif()
+
+

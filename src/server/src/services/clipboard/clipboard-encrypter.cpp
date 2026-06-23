@@ -1,6 +1,6 @@
 #include "services/clipboard/clipboard-encrypter.hpp"
 #include <qstringview.h>
-#include <qt6keychain/keychain.h>
+#include <keychain.h>
 #include "vicinae.hpp"
 #include "crypto.hpp"
 

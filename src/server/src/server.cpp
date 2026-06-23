@@ -100,7 +100,7 @@ int startServer(const ServerLaunchOptions &launchOpts) {
   // launch would proceed and steal focus.
   if (const auto sock = Omnicast::commandSocketPath(); std::filesystem::exists(sock)) {
     QLocalSocket probe;
-    probe.connectToServer(sock.c_str());
+    probe.connectToServer(QString::fromStdString(sock.string()));
     if (probe.waitForConnected(100)) {
       probe.disconnectFromServer();
       qWarning() << "another vicinae instance is already running";
@@ -116,7 +116,8 @@ int startServer(const ServerLaunchOptions &launchOpts) {
 #endif
 
   int argc = 1;
-  static char *argv[] = {strdup("command"), nullptr};
+  static char appName[] = "command";
+  static char *argv[] = {appName, nullptr};
   QGuiApplication const qapp(argc, argv);
   QGuiApplication::setApplicationName("vicinae");
   QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);

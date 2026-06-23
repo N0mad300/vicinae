@@ -38,7 +38,8 @@ void Bus::readyRead() {
     _message.data.append(read);
 
     while (std::cmp_greater_equal(_message.data.size(), sizeof(uint32_t))) {
-      uint32_t const length = ntohl(*reinterpret_cast<uint32_t *>(_message.data.data()));
+      uint32_t const length =
+          qFromBigEndian<uint32_t>(reinterpret_cast<const uchar *>(_message.data.constData()));
       bool const isComplete = _message.data.size() - sizeof(uint32_t) >= length;
 
       if (!isComplete) break;
@@ -89,7 +90,7 @@ std::optional<fs::path> ExtensionManager::nodeExecutable() {
 
     if (fs::is_regular_file(*bin, ec)) { return bin; }
 
-    if (auto path = QStandardPaths::findExecutable(bin->c_str()); !path.isEmpty()) {
+    if (auto path = QStandardPaths::findExecutable(QString::fromStdString(bin->string())); !path.isEmpty()) {
       return path.toStdString();
     }
 
@@ -135,12 +136,12 @@ bool ExtensionManager::start() {
   fs::path const managerPath = Omnicast::runtimeDir() / "extension-manager.js";
 
   QFile::remove(managerPath);
-  QFile::copy(":bin/extension-manager", managerPath.c_str());
+  QFile::copy(":bin/extension-manager", QString::fromStdString(managerPath.string()));
   PidFile pidFile("extension-manager");
 
   if (pidFile.exists() && pidFile.kill()) { qInfo() << "Killed existing extension manager instance"; }
 
-  m_process.start(node->c_str(), {managerPath.c_str()});
+  m_process.start(QString::fromStdString(node->string()), {QString::fromStdString(managerPath.string())});
 
   if (!m_process.waitForStarted(maxWaitForStart)) {
     qCritical() << "Failed to start extension manager" << m_process.errorString();

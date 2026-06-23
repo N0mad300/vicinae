@@ -47,7 +47,9 @@ inline std::unique_ptr<ActionPanelState> actionPanel(const std::filesystem::path
   QMimeDatabase mimeDb;
   auto panel = std::make_unique<ListActionPanelState>();
   auto section = panel->createSection();
-  auto mime = mimeDb.mimeTypeForFile(path.c_str());
+  auto pathString = QString::fromStdString(path.string());
+  auto fileNameString = QString::fromStdString(path.filename().string());
+  auto mime = mimeDb.mimeTypeForFile(pathString);
   auto appDb = ctx->services->appDb();
   auto pasteService = ctx->services->pasteService();
   auto openers = appDb->findCuratedOpeners(mime.name());
@@ -71,10 +73,9 @@ inline std::unique_ptr<ActionPanelState> actionPanel(const std::filesystem::path
 
   auto utils = panel->createSection();
   auto copy = AbstractAction::make<CopyToClipboardAction>(Clipboard::File(path), "Copy file");
-  auto copyPath =
-      AbstractAction::make<CopyToClipboardAction>(Clipboard::Text(path.c_str()), "Copy file path");
+  auto copyPath = AbstractAction::make<CopyToClipboardAction>(Clipboard::Text(pathString), "Copy file path");
   auto copyFileName =
-      AbstractAction::make<CopyToClipboardAction>(Clipboard::Text(path.filename().c_str()), "Copy file name");
+      AbstractAction::make<CopyToClipboardAction>(Clipboard::Text(fileNameString), "Copy file name");
 
   copy->setShortcut(Keybind::CopyAction);
 

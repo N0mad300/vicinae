@@ -43,16 +43,20 @@ class CalculatorRefreshRatesCommand : public BuiltinCallbackCommand {
   }
 
   void execute(CommandController *ctrl) const override {
-    using Watcher = QFutureWatcher<std::optional<std::string>>;
+    using Watcher = QFutureWatcher<AbstractCalculatorBackend::RefreshExchangeRatesResult>;
 
     auto calc = ctrl->context()->services->calculatorService();
     auto toast = ctrl->context()->services->toastService();
-    auto task = calc->backend()->refreshExchangeRates();
-    auto watcher = new QFutureWatcher<AbstractCalculatorBackend::RefreshExchangeRatesResult>;
+    auto backend = calc->backend();
 
-    if (!calc->backend()->supportsRefreshExchangeRates()) {
-      return toast->failure(QString("%1 can't refresh rates").arg(calc->backend()->displayName()));
+    if (!backend) { return toast->failure("No calculator backend is available"); }
+
+    if (!backend->supportsRefreshExchangeRates()) {
+      return toast->failure(QString("%1 can't refresh rates").arg(backend->displayName()));
     }
+
+    auto task = backend->refreshExchangeRates();
+    auto watcher = new Watcher;
 
     ctrl->context()->navigation->clearSearchText();
     toast->dynamic("Refreshing rates...");
@@ -113,7 +117,9 @@ public:
     auto calc = ServiceRegistry::instance()->calculatorService();
     bool refreshOnStartup = value.value("refreshRatesOnStartup").toBool();
 
-    if (refreshOnStartup) { calc->backend()->refreshExchangeRates(); }
+    if (!calc->backend()) { calc->startFirstHealthy(); }
+    if (refreshOnStartup && calc->backend() && calc->backend()->supportsRefreshExchangeRates())
+      calc->backend()->refreshExchangeRates();
   }
 
   void preferenceValuesChanged(const QJsonObject &value) const override {

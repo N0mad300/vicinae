@@ -13,8 +13,10 @@
 #include <QUrl>
 #include <QColor>
 #include <QtConcurrent/QtConcurrent>
+#ifndef Q_OS_WIN
 #include <QDBusConnection>
 #include <QDBusInterface>
+#endif
 #include <QEvent>
 #include <QSqlQuery>
 #include <QFutureWatcher>

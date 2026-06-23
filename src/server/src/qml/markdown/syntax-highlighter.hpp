@@ -2,15 +2,17 @@
 
 #include "theme/colors.hpp"
 #include "theme/theme-file.hpp"
+#include <QString>
+#include <array>
+
+#ifdef VICINAE_ENABLE_KF6_SYNTAX_HIGHLIGHTING
 #include <KSyntaxHighlighting/AbstractHighlighter>
 #include <KSyntaxHighlighting/Definition>
 #include <KSyntaxHighlighting/Format>
 #include <KSyntaxHighlighting/Repository>
 #include <KSyntaxHighlighting/State>
 #include <KSyntaxHighlighting/Theme>
-#include <QString>
 #include <QStringView>
-#include <array>
 
 namespace syntax {
 
@@ -177,3 +179,20 @@ inline QString highlight(const QString &code, const QString &language, const Sty
 }
 
 } // namespace syntax
+
+#else
+
+namespace syntax {
+
+struct StyleInfo {};
+using StyleMap = std::array<StyleInfo, 1>;
+
+inline StyleMap buildStyleMap(const ThemeFile &) { return {}; }
+
+inline QString highlight(const QString &code, const QString &, const StyleMap &, bool) {
+  return QStringLiteral("<pre>") + code.toHtmlEscaped() + QStringLiteral("</pre>");
+}
+
+} // namespace syntax
+
+#endif

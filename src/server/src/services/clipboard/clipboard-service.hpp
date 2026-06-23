@@ -15,7 +15,7 @@
 #include <qmimedatabase.h>
 #include <qstringview.h>
 #include <QTimer>
-#include <qt6keychain/keychain.h>
+#include <keychain.h>
 
 namespace Clipboard {
 [[maybe_unused]] static const char *CONCEALED_MIME_TYPE = "vicinae/concealed";

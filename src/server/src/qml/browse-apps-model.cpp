@@ -45,8 +45,10 @@ std::unique_ptr<ActionPanelState> BrowseAppsSection::buildActionPanel(const AppP
     mainSection->addAction(action);
   }
 
-  if (auto opener = appDb->findDefaultOpener(app->path().c_str())) {
-    auto *openLocation = new OpenAppAction(opener, "Open Location", {app->path().c_str()});
+  QString appPath = QString::fromStdString(app->path().string());
+
+  if (auto opener = appDb->findDefaultOpener(appPath)) {
+    auto *openLocation = new OpenAppAction(opener, "Open Location", {appPath});
     openLocation->setShortcut(Keybind::OpenAction);
     utils->addAction(openLocation);
   }
@@ -54,7 +56,7 @@ std::unique_ptr<ActionPanelState> BrowseAppsSection::buildActionPanel(const AppP
   auto *copyId = new CopyToClipboardAction(Clipboard::Text(app->id()), "Copy App ID");
   utils->addAction(copyId);
 
-  auto *copyLocation = new CopyToClipboardAction(Clipboard::Text(app->path().c_str()), "Copy App Location");
+  auto *copyLocation = new CopyToClipboardAction(Clipboard::Text(appPath), "Copy App Location");
   utils->addAction(copyLocation);
 
   return panel;

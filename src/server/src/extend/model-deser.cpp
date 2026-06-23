@@ -3,6 +3,7 @@
 #include <chrono>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -35,6 +36,12 @@ static constexpr glz::opts PARSE_OPTS{.error_on_unknown_keys = false, .minified 
 
 static inline QString toQStr(const std::string &s) {
   return QString::fromUtf8(s.data(), static_cast<qsizetype>(s.size()));
+}
+
+template <typename T>
+  requires std::is_class_v<T>
+static bool operator<(const T &, const T &) {
+  return false;
 }
 
 struct DynColorRaw {
@@ -1023,6 +1030,18 @@ struct FormTagPickerFieldWire {
   FIELD_BASE_WIRE_MEMBERS
 };
 
+static bool operator<(const FormTextFieldWire &, const FormTextFieldWire &) { return false; }
+static bool operator<(const FormPasswordFieldWire &, const FormPasswordFieldWire &) { return false; }
+static bool operator<(const FormCheckboxFieldWire &, const FormCheckboxFieldWire &) { return false; }
+static bool operator<(const FormDropdownFieldWire &, const FormDropdownFieldWire &) { return false; }
+static bool operator<(const FormTextAreaFieldWire &, const FormTextAreaFieldWire &) { return false; }
+static bool operator<(const FormFilePickerFieldWire &, const FormFilePickerFieldWire &) { return false; }
+static bool operator<(const FormDatePickerFieldWire &, const FormDatePickerFieldWire &) { return false; }
+static bool operator<(const FormSeparatorWire &, const FormSeparatorWire &) { return false; }
+static bool operator<(const FormDescriptionWire &, const FormDescriptionWire &) { return false; }
+static bool operator<(const FormLinkAccessoryWire &, const FormLinkAccessoryWire &) { return false; }
+static bool operator<(const ActionPannelModelWire &, const ActionPannelModelWire &) { return false; }
+static bool operator<(const FormTagPickerFieldWire &, const FormTagPickerFieldWire &) { return false; }
 using FormChild =
     std::variant<FormTextFieldWire, FormPasswordFieldWire, FormCheckboxFieldWire, FormDropdownFieldWire,
                  FormTextAreaFieldWire, FormFilePickerFieldWire, FormDatePickerFieldWire, FormSeparatorWire,

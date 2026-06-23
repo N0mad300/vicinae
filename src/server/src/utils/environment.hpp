@@ -1,5 +1,7 @@
 #pragma once
+#ifdef Q_OS_LINUX
 #include "xdgpp/env/env.hpp"
+#endif
 #include <QString>
 #include <QGuiApplication>
 #include <QProcess>
@@ -46,18 +48,27 @@ static inline bool containsIgnoreCase(const std::vector<std::string> &desktops, 
   });
 }
 
+#ifdef Q_OS_LINUX
 inline bool isCosmicDesktop() { return containsIgnoreCase(xdgpp::currentDesktop(), "cosmic"); }
 inline bool isNiriCompositor() { return containsIgnoreCase(xdgpp::currentDesktop(), "niri"); }
 inline bool isHyprlandCompositor() { return containsIgnoreCase(xdgpp::currentDesktop(), "Hyprland"); }
 inline bool isPlasmaDesktop() { return containsIgnoreCase(xdgpp::currentDesktop(), "kde"); }
 inline bool isWaylandPlasmaDesktop() { return isWaylandSession() && isPlasmaDesktop(); }
 inline bool isGnomeDesktop() { return containsIgnoreCase(xdgpp::currentDesktop(), "gnome"); }
+#else
+inline bool isCosmicDesktop() { return false; }
+inline bool isNiriCompositor() { return false; }
+inline bool isHyprlandCompositor() { return false; }
+inline bool isPlasmaDesktop() { return false; }
+inline bool isWaylandPlasmaDesktop() { return false; }
+inline bool isGnomeDesktop() { return false; }
+#endif
 
 // used mostly to exclude cosmic which's implementation is currently broken
 inline bool isLayerShellSupported() {
 #ifndef WAYLAND_LAYER_SHELL
   return false;
-#elifdef Q_OS_LINUX
+#elif defined(Q_OS_LINUX)
   return Wayland::Globals::layerShell() && !isCosmicDesktop();
 #else
   return false;
@@ -89,6 +100,7 @@ inline bool isAppImage() { return appImageDir().has_value(); }
 
 inline QStringList fallbackIconSearchPaths() {
   QStringList list;
+#ifdef Q_OS_LINUX
   auto dirs = xdgpp::dataDirs();
 
   list.reserve(dirs.size() * 2);
@@ -100,6 +112,7 @@ inline QStringList fallbackIconSearchPaths() {
   for (const auto &dir : dirs) {
     list << (dir / "icons").c_str();
   }
+#endif
 
   return list;
 }
@@ -113,6 +126,11 @@ inline QString vicinaeApiBaseUrl() {
  * Gets human-readable environment description
  */
 inline QString getEnvironmentDescription() {
+#ifdef Q_OS_WIN
+  return "Windows";
+#elif defined(Q_OS_MACOS)
+  return "macOS";
+#else
   QString desc;
   const QString desktop = qgetenv("XDG_CURRENT_DESKTOP");
 
@@ -131,9 +149,13 @@ inline QString getEnvironmentDescription() {
   }
 
   return desc;
+#endif
 }
 
 inline std::string chassisType() {
+#ifndef Q_OS_LINUX
+  return "unknown";
+#else
   std::ifstream file("/sys/class/dmi/id/chassis_type");
   if (!file.is_open()) return "unknown";
 
@@ -161,14 +183,19 @@ inline std::string chassisType() {
   default:
     return "other";
   }
+#endif
 }
 
 inline std::optional<QString> detectAppLauncher() {
+#ifndef Q_OS_LINUX
+  return std::nullopt;
+#else
   QProcess proc;
   proc.start("uwsm", {"check", "is-active"});
   if (!proc.waitForFinished(1000) || proc.exitCode() != 0) return std::nullopt;
   if (!QStandardPaths::findExecutable("uwsm-app").isEmpty()) return "uwsm-app --";
   return "uwsm app --";
+#endif
 }
 
 } // namespace Environment

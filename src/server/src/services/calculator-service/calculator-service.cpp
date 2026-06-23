@@ -10,7 +10,11 @@
 #include <qnamespace.h>
 #include <qobjectdefs.h>
 
+#include "dummy-calculator-backend.hpp"
+
+#ifdef VICINAE_ENABLE_QALCULATE
 #include "qalculate/qalculate-backend.hpp"
+#endif
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 #include "soulver-core/soulver-core.hpp"
@@ -342,13 +346,18 @@ CalculatorService::CalculatorService(OmniDatabase &db) : m_db(db) {
   {
     std::vector<std::unique_ptr<AbstractCalculatorBackend>> candidates;
 
+#ifdef VICINAE_ENABLE_QALCULATE
     candidates.emplace_back(std::make_unique<QalculateBackend>());
+#endif
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
     candidates.emplace_back(std::make_unique<SoulverCoreCalculator>());
 #endif
+    candidates.emplace_back(std::make_unique<DummyCalculatorBackend>());
 
     for (auto &candidate : candidates) {
       if (candidate->isActivatable()) { m_backends.emplace_back(std::move(candidate)); }
     }
   }
+
+  startFirstHealthy();
 }

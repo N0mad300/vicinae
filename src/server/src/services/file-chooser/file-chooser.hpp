@@ -1,6 +1,8 @@
 #pragma once
 #include "abstract-file-chooser.hpp"
+#ifdef Q_OS_LINUX
 #include "xdp-file-chooser/xdp-file-chooser.hpp"
+#endif
 #include <qobject.h>
 #include <qtmetamacros.h>
 
@@ -21,5 +23,7 @@ public:
   void close();
 
 private:
+#ifdef Q_OS_LINUX
   XdpFileChooser m_xdp;
+#endif
 };

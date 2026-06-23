@@ -130,21 +130,23 @@ template <> struct Partial<WindowConfig> {
 };
 
 struct FontConfig {
-  std::string rendering = "qt";
-
-  struct {
+  struct Normal {
     std::string family = "auto";
     float size = 10.5;
-  } normal;
+  };
+
+  std::string rendering = "qt";
+  Normal normal;
 };
 
 template <> struct Partial<FontConfig> {
-  std::optional<std::string> rendering;
-
-  struct {
+  struct Normal {
     std::optional<std::string> family;
     std::optional<float> size;
-  } normal;
+  };
+
+  std::optional<std::string> rendering;
+  Normal normal;
 };
 
 struct Margin {

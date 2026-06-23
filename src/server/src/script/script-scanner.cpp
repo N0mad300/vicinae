@@ -45,7 +45,7 @@ ScriptScanner::scan(std::span<const std::filesystem::path> dirs) {
 
       if (std::ranges::contains(forbiddenExtensions, ext)) { continue; }
 
-      QMimeType const mime = mimeDb.mimeTypeForFile(ent.path().c_str());
+      QMimeType const mime = mimeDb.mimeTypeForFile(QString::fromStdString(ent.path().string()));
       bool const plainText = mime.inherits("text/plain");
 
       if (!plainText) continue;

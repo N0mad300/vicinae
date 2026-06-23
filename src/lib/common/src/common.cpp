@@ -7,6 +7,11 @@
 #ifdef __APPLE__
 #include <climits>
 #include <mach-o/dyld.h>
+#elif defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 namespace fs = std::filesystem;
@@ -21,6 +26,22 @@ fs::path selfPath() {
   std::string dyn(size, '\0');
   if (_NSGetExecutablePath(dyn.data(), &size) != 0) return {};
   return fs::canonical(dyn.c_str());
+}
+#elif defined(_WIN32)
+fs::path selfPath() {
+  std::wstring buffer(MAX_PATH, L'\0');
+
+  for (;;) {
+    DWORD len = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    if (len == 0) return {};
+
+    if (len < buffer.size() - 1) {
+      buffer.resize(len);
+      return fs::canonical(buffer);
+    }
+
+    buffer.resize(buffer.size() * 2);
+  }
 }
 #else
 fs::path selfPath() { return fs::canonical("/proc/self/exe"); }
@@ -66,7 +87,11 @@ std::optional<fs::path> findServerBinary() {
   const auto self = selfPath();
   if (self.parent_path().filename() == "MacOS") { return findHelperProgram("Vicinae"); }
 #endif
+#ifdef _WIN32
+  return findHelperProgram("vicinae-server.exe");
+#else
   return findHelperProgram("vicinae-server");
+#endif
 }
 
 }; // namespace vicinae

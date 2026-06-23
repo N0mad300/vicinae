@@ -23,7 +23,7 @@ ExtensionRegistry::ExtensionRegistry(LocalStorageService &storage) : m_storage(s
   m_rescanDebounce.setSingleShot(true);
 
   for (const auto &dir : m_extDirs) {
-    m_watcher->addPath(dir.c_str());
+    m_watcher->addPath(QString::fromStdString(dir.string()));
   }
 
   // XXX: we currently do not support removing extensions by filesystem removal
@@ -115,12 +115,12 @@ std::vector<ExtensionManifest> ExtensionRegistry::scanAll() {
       if (!entry.is_directory(ec)) continue;
 
       fs::path const &path = entry.path();
-      std::string const filename = path.filename();
+      std::string const filename = path.filename().string();
 
       if (filename.starts_with('.')) continue;
 
       if (auto it = m_installed.find(filename); it != m_installed.end()) {
-        qWarning() << path.c_str()
+        qWarning() << QString::fromStdString(path.string())
                    << "shadowed by extension with same directory name in higher precedence directory"
                    << it->second;
         continue;
@@ -129,7 +129,8 @@ std::vector<ExtensionManifest> ExtensionRegistry::scanAll() {
       auto manifest = ExtensionManifest::fromPackageJson(entry.path());
 
       if (!manifest) {
-        qCritical() << "Failed to load bundle at" << entry.path().c_str() << manifest.error().m_message;
+        qCritical() << "Failed to load bundle at" << QString::fromStdString(entry.path().string())
+                    << manifest.error().m_message;
         continue;
       }
 

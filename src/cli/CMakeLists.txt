@@ -16,6 +16,10 @@ figura_compile(
 	OUTPUT ipc-client.hpp
 )
 
+if (WIN32)
+	find_package(Qt6 REQUIRED COMPONENTS Core Network)
+endif()
+
 add_executable(${PROJECT_NAME} src/main.cpp src/cli.cpp src/server.cpp src/theme.cpp src/fs.cpp ${SRCS})
 target_include_directories(${PROJECT_NAME} PRIVATE src ${GENOUT})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
@@ -23,4 +27,7 @@ include(EmbedFile)
 embed_file(${PROJECT_NAME} "${EXTRA_DIR}/config.jsonc" DEFAULT_CONFIG)
 embed_file(${PROJECT_NAME} "${EXTRA_DIR}/theme-template.toml" THEME_TEMPLATE)
 target_link_libraries(${PROJECT_NAME} glaze::glaze vicinae::scriptcommand vicinae::common)
+if (WIN32)
+	target_link_libraries(${PROJECT_NAME} Qt6::Core Qt6::Network)
+endif()
 install(TARGETS ${PROJECT_NAME})

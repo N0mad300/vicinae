@@ -135,7 +135,7 @@ DesktopEntry::DesktopEntry(const fs::path &path, const ParseOptions &opts) {
   std::error_code ec;
 
   if (!fs::is_regular_file(path, ec)) {
-    m_error = std::string("Could not read file at ") + path.c_str();
+    m_error = std::string("Could not read file at ") + path.string();
     return;
   }
 

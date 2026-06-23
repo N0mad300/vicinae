@@ -1,5 +1,11 @@
 #include "os-release.hpp"
+#include <QtGlobal>
+
+#ifdef Q_OS_WIN
+#include <QSysInfo>
+#else
 #include <qfile.h>
+#endif
 
 QString OsRelease::id() const { return m_id; }
 QString OsRelease::prettyName() const { return m_prettyName; }
@@ -7,6 +13,12 @@ QString OsRelease::version() const { return m_version; }
 bool OsRelease::isValid() const { return m_valid; }
 
 OsRelease::OsRelease() {
+#ifdef Q_OS_WIN
+  m_valid = true;
+  m_id = QSysInfo::productType();
+  m_prettyName = QSysInfo::prettyProductName();
+  m_version = QSysInfo::productVersion();
+#else
   QFile file("/etc/os-release");
 
   if (!file.open(QIODevice::ReadOnly)) return;
@@ -32,4 +44,5 @@ OsRelease::OsRelease() {
       m_version = v;
     }
   }
+#endif
 }

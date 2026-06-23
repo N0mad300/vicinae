@@ -121,13 +121,13 @@ public:
       m_lexer.getNext();
 
       while (auto tok = m_lexer.peak()) {
-        if (tok->type == TokenType::Struct) { m_tree.structs.emplace_back(parseStruct()); }
-        if (tok->type == TokenType::Service) { m_tree.services.emplace_back(parseService()); }
-        if (tok->type == TokenType::Semicolon) {
+        if (tok->type == FiguraTokenType::Struct) { m_tree.structs.emplace_back(parseStruct()); }
+        if (tok->type == FiguraTokenType::Service) { m_tree.services.emplace_back(parseService()); }
+        if (tok->type == FiguraTokenType::Semicolon) {
           m_lexer.getNext();
           continue;
         }
-        if (tok->type == TokenType::Enum) { m_tree.enums.emplace_back(parseEnum()); }
+        if (tok->type == FiguraTokenType::Enum) { m_tree.enums.emplace_back(parseEnum()); }
       }
 
       return std::move(m_tree);
@@ -161,7 +161,9 @@ public:
   TypeValue parseTypeValue() {
     auto typeTok = m_lexer.peak();
 
-    if (typeTok->type != TokenType::Identifier) { throw std::runtime_error("Expected type identifier"); }
+    if (typeTok->type != FiguraTokenType::Identifier) {
+      throw std::runtime_error("Expected type identifier");
+    }
 
     auto type = resolveType(typeTok->data);
     if (!type) { throw std::runtime_error(std::format("{} is not a valid type", typeTok->data)); }
@@ -172,9 +174,9 @@ public:
   TypeValue parseType() {
     auto type = parseTypeValue();
 
-    if (auto tok = m_lexer.peak(); tok->type == TokenType::LBracket) {
+    if (auto tok = m_lexer.peak(); tok->type == FiguraTokenType::LBracket) {
       m_lexer.getNext();
-      if (auto tok2 = m_lexer.peak(); tok2->type == TokenType::RBracket) {
+      if (auto tok2 = m_lexer.peak(); tok2->type == FiguraTokenType::RBracket) {
         type.isArray = true;
         m_lexer.getNext();
       }
@@ -184,25 +186,26 @@ public:
   }
 
   Service *parseService() {
-    assertGetNext(TokenType::Service, "Expected service token");
+    assertGetNext(FiguraTokenType::Service, "Expected service token");
 
     auto service = new Service;
-    service->name = assertGetNext(TokenType::Identifier, "expected identifier after service keyword").data;
-    assertGetNext(TokenType::LBrace, "expected lbrace to define service");
+    service->name =
+        assertGetNext(FiguraTokenType::Identifier, "expected identifier after service keyword").data;
+    assertGetNext(FiguraTokenType::LBrace, "expected lbrace to define service");
 
-    while (peakUnless(TokenType::RBrace)) {
+    while (peakUnless(FiguraTokenType::RBrace)) {
       auto tok = m_lexer.peak();
 
-      if (tok->type == TokenType::Method || tok->type == TokenType::Async) {
+      if (tok->type == FiguraTokenType::Method || tok->type == FiguraTokenType::Async) {
         service->methods.emplace_back(parseMethod());
-      } else if (tok->type == TokenType::Event) {
+      } else if (tok->type == FiguraTokenType::Event) {
         service->events.emplace_back(parseEvent());
       } else {
         throw std::runtime_error(R"(Expected "fn" or "event" keyword in service)");
       }
     }
 
-    assertGetNext(TokenType::RBrace, "rbrace expected to close service");
+    assertGetNext(FiguraTokenType::RBrace, "rbrace expected to close service");
 
     return service;
   }
@@ -210,13 +213,13 @@ public:
   std::vector<MethodParameter> parseParameterList() {
     std::vector<MethodParameter> params;
 
-    assertGetNext(TokenType::LParen, "expected ( to start method parameters");
+    assertGetNext(FiguraTokenType::LParen, "expected ( to start method parameters");
 
     while (auto tok = m_lexer.peak()) {
       MethodParameter param;
 
-      if (tok->type == TokenType::RParen) { break; }
-      if (tok->type == TokenType::Comma) {
+      if (tok->type == FiguraTokenType::RParen) { break; }
+      if (tok->type == FiguraTokenType::Comma) {
         m_lexer.getNext();
         continue;
       }
@@ -228,20 +231,20 @@ public:
       params.emplace_back(param);
     }
 
-    assertGetNext(TokenType::RParen, "rparen at the end of parameter list was expected");
+    assertGetNext(FiguraTokenType::RParen, "rparen at the end of parameter list was expected");
 
     return params;
   }
 
   // assert current tok is of type and then go next
-  Token assertGetNext(TokenType type, const std::string &reason = "assertPeak failed") {
+  Token assertGetNext(FiguraTokenType type, const std::string &reason = "assertPeak failed") {
     auto tok = m_lexer.peak();
     if (!tok || tok->type != type) { throw std::runtime_error(reason); }
     m_lexer.getNext();
     return tok.value();
   }
 
-  std::optional<Token> peakUnless(TokenType type) {
+  std::optional<Token> peakUnless(FiguraTokenType type) {
     auto tok = m_lexer.peak();
     if (tok->type == type) return std::nullopt;
     return tok;
@@ -250,18 +253,18 @@ public:
   Method parseMethod() {
     Method method{};
 
-    if (auto tok = m_lexer.peak(); tok && tok->type == TokenType::Async) {
+    if (auto tok = m_lexer.peak(); tok && tok->type == FiguraTokenType::Async) {
       m_lexer.getNext();
       method.isAsync = true;
     }
 
-    assertGetNext(TokenType::Method, "expected fn keyword before method");
-    method.name = assertGetNext(TokenType::Identifier, "Expected identifier after \"fn\"").data;
+    assertGetNext(FiguraTokenType::Method, "expected fn keyword before method");
+    method.name = assertGetNext(FiguraTokenType::Identifier, "Expected identifier after \"fn\"").data;
     method.params = this->parseParameterList();
 
-    assertGetNext(TokenType::Arrow, "Expected => <return_type> for service method");
+    assertGetNext(FiguraTokenType::Arrow, "Expected => <return_type> for service method");
     method.returnType = parseType();
-    assertGetNext(TokenType::Semicolon, "expected semicolon at the end of service method");
+    assertGetNext(FiguraTokenType::Semicolon, "expected semicolon at the end of service method");
 
     return method;
   }
@@ -269,10 +272,10 @@ public:
   Event parseEvent() {
     Event event{};
 
-    assertGetNext(TokenType::Event, "Expected event");
-    event.name = assertGetNext(TokenType::Identifier, "Expected identifier after \"event\"").data;
+    assertGetNext(FiguraTokenType::Event, "Expected event");
+    event.name = assertGetNext(FiguraTokenType::Identifier, "Expected identifier after \"event\"").data;
     event.params = parseParameterList();
-    assertGetNext(TokenType::Semicolon, "expected semicolon at the end of event method");
+    assertGetNext(FiguraTokenType::Semicolon, "expected semicolon at the end of event method");
 
     return event;
   }
@@ -280,22 +283,24 @@ public:
   EnumValue parseEnum() {
     EnumValue ev;
 
-    assertGetNext(TokenType::Enum, "expected enum kw");
-    ev.name = assertGetNext(TokenType::Identifier, "expected identifier after enum keyword").data;
-    assertGetNext(TokenType::LBrace, "expected lbrace");
+    assertGetNext(FiguraTokenType::Enum, "expected enum kw");
+    ev.name = assertGetNext(FiguraTokenType::Identifier, "expected identifier after enum keyword").data;
+    assertGetNext(FiguraTokenType::LBrace, "expected lbrace");
 
-    while (auto tok = peakUnless(TokenType::RBrace)) {
-      if (tok->type == TokenType::Comma) {
+    while (auto tok = peakUnless(FiguraTokenType::RBrace)) {
+      if (tok->type == FiguraTokenType::Comma) {
         m_lexer.getNext();
         continue;
       }
-      if (tok->type != TokenType::Identifier) { throw std::runtime_error("Expected identifier in enum"); }
+      if (tok->type != FiguraTokenType::Identifier) {
+        throw std::runtime_error("Expected identifier in enum");
+      }
 
       ev.values.emplace_back(tok->data);
       m_lexer.getNext();
     }
 
-    assertGetNext(TokenType::RBrace);
+    assertGetNext(FiguraTokenType::RBrace);
 
     return ev;
   }
@@ -305,15 +310,15 @@ public:
     std::string_view name;
     TypeValue tval;
 
-    name = assertGetNext(TokenType::Identifier).data;
+    name = assertGetNext(FiguraTokenType::Identifier).data;
     bool optional = false;
 
-    if (m_lexer.peak()->type == TokenType::QuestionMark) {
+    if (m_lexer.peak()->type == FiguraTokenType::QuestionMark) {
       optional = true;
       m_lexer.getNext();
     }
 
-    assertGetNext(TokenType::Colon, "expected colon after struct field name");
+    assertGetNext(FiguraTokenType::Colon, "expected colon after struct field name");
     tval = parseType();
     tval.isOptional = optional;
 
@@ -322,21 +327,21 @@ public:
 
   TypeStruct *parseStruct() {
     auto type = new TypeStruct;
-    assertGetNext(TokenType::Struct, "Expected struct");
-    type->name = assertGetNext(TokenType::Identifier, "expected identifier after struct keyword").data;
-    assertGetNext(TokenType::LBrace, "expected lbrace after struct name");
+    assertGetNext(FiguraTokenType::Struct, "Expected struct");
+    type->name = assertGetNext(FiguraTokenType::Identifier, "expected identifier after struct keyword").data;
+    assertGetNext(FiguraTokenType::LBrace, "expected lbrace after struct name");
 
-    while (peakUnless(TokenType::RBrace)) {
+    while (peakUnless(FiguraTokenType::RBrace)) {
       StructField field;
       auto [name, tval] = parseTypeExpression();
 
       field.name = name;
       field.type = std::move(tval);
-      assertGetNext(TokenType::Semicolon, "expected semicolon at the end of struct field");
+      assertGetNext(FiguraTokenType::Semicolon, "expected semicolon at the end of struct field");
       type->fields.emplace_back(field);
     }
 
-    assertGetNext(TokenType::RBrace);
+    assertGetNext(FiguraTokenType::RBrace);
 
     return type;
   }

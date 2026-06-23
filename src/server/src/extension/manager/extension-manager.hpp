@@ -5,9 +5,9 @@
 #include "generated/manager.hpp"
 #include <QUuid>
 #include <QtCore>
+#include <QtEndian>
 #include <cstdint>
 #include "common.hpp"
-#include <netinet/in.h>
 #include <qdebug.h>
 #include <qdir.h>
 #include <qfuturewatcher.h>
@@ -25,8 +25,6 @@
 #include <qstringview.h>
 #include <qthread.h>
 #include <quuid.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 class Bus : public QObject, public manager::AbstractTransport {
   Q_OBJECT
