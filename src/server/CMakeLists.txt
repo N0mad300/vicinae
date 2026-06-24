@@ -657,7 +657,7 @@ if(WIN32)
 		src/services/startup/windows-startup-launch-service.hpp
 		src/services/startup/windows-startup-launch-service.cpp
 	)
-	list(APPEND LIBS Ole32 Shell32 Shlwapi)
+	list(APPEND LIBS Ole32 Propsys Shell32 Shlwapi)
 endif()
 
 list(APPEND SRCS

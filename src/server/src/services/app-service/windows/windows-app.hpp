@@ -1,21 +1,35 @@
 #pragma once
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <vector>
+#include "builtin_icon.hpp"
 #include "services/app-service/abstract-app-db.hpp"
 
 class WindowsApplication : public AbstractApplication {
 public:
-  enum class LaunchKind : std::uint8_t { Shortcut, ShellOpen, Explorer, Terminal };
+  enum class LaunchKind : std::uint8_t {
+    Shortcut,
+    StartMenuFile,
+    Executable,
+    AppUserModel,
+    Uri,
+    ShellOpen,
+    Explorer,
+    Terminal
+  };
 
   struct Data {
     QString id;
     QString displayName;
     QString description;
     QString program;
+    QString launchTarget;
+    QString appUserModelId;
     std::filesystem::path path;
     std::filesystem::path targetPath;
     std::filesystem::path iconPath;
+    std::optional<BuiltinIcon> builtinIcon;
     std::vector<QString> keywords;
     LaunchKind launchKind = LaunchKind::Shortcut;
     bool displayable = true;

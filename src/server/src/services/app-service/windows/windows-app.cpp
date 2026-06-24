@@ -9,6 +9,7 @@ ImageURL WindowsApplication::iconUrl() const {
   if (!m_data.iconPath.empty()) { return ImageURL::fileIcon(m_data.iconPath); }
   if (!m_data.targetPath.empty()) { return ImageURL::fileIcon(m_data.targetPath); }
   if (!m_data.path.empty()) { return ImageURL::fileIcon(m_data.path); }
+  if (m_data.builtinIcon) { return ImageURL::builtin(*m_data.builtinIcon); }
   return ImageURL::builtin(BuiltinIcon::AppWindow);
 }
 
@@ -25,6 +26,7 @@ bool WindowsApplication::matchesWindowClass(const QString &wmClass) const {
   };
 
   if (matches(m_data.id) || matches(m_data.displayName) || matches(m_data.program)) return true;
+  if (matches(m_data.appUserModelId) || matches(m_data.launchTarget)) return true;
 
   if (!m_data.targetPath.empty()) {
     QFileInfo const target(QString::fromStdWString(m_data.targetPath.wstring()));

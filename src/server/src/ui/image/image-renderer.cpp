@@ -14,7 +14,9 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+#include <Objbase.h>
 #include <Windows.h>
+#include <ShlObj.h>
 #include <shellapi.h>
 #endif
 #include <QBuffer>
@@ -194,6 +196,63 @@ static void applyFillColor(QImage &image, const QColor &fg) {
   image = tinted;
 }
 
+#ifdef Q_OS_WIN
+class ScopedComApartment {
+public:
+  ScopedComApartment() {
+    m_result = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    m_initialized = SUCCEEDED(m_result);
+  }
+
+  ~ScopedComApartment() {
+    if (m_initialized) { CoUninitialize(); }
+  }
+
+  bool usable() const { return SUCCEEDED(m_result) || m_result == RPC_E_CHANGED_MODE; }
+
+private:
+  HRESULT m_result = E_FAIL;
+  bool m_initialized = false;
+};
+
+QImage imageFromWindowsIcon(HICON icon, const QSize &size) {
+  if (!icon) return {};
+
+  QImage image = QImage::fromHICON(icon);
+  DestroyIcon(icon);
+
+  if (!image.isNull() && size.isValid()) {
+    qreal const dpr = qGuiApp->devicePixelRatio();
+    QSize const logicalSize(qCeil(size.width() / dpr), qCeil(size.height() / dpr));
+    image = image.scaled(logicalSize * dpr, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    image.setDevicePixelRatio(dpr);
+  }
+
+  return image;
+}
+
+QImage renderShellNamespaceIcon(const QString &path, const QSize &size) {
+  if (!path.startsWith(QStringLiteral("shell:"), Qt::CaseInsensitive)) return {};
+
+  ScopedComApartment apartment;
+  if (!apartment.usable()) return {};
+
+  PIDLIST_ABSOLUTE pidl = nullptr;
+  auto nativePath = path.toStdWString();
+  if (FAILED(SHParseDisplayName(nativePath.c_str(), nullptr, &pidl, 0, nullptr)) || !pidl) return {};
+
+  SHFILEINFOW fileInfo = {};
+  QImage image;
+  if (SHGetFileInfoW(reinterpret_cast<LPCWSTR>(pidl), 0, &fileInfo, sizeof(fileInfo),
+                     SHGFI_PIDL | SHGFI_ICON | SHGFI_LARGEICON)) {
+    image = imageFromWindowsIcon(fileInfo.hIcon, size);
+  }
+
+  CoTaskMemFree(pidl);
+  return image;
+}
+#endif
+
 QImage renderFileIcon(const QString &path, const QSize &size, const QColor &fg, const QColor &bg) {
 #ifdef Q_OS_MACOS
   if (!fg.isValid()) {
@@ -202,18 +261,13 @@ QImage renderFileIcon(const QString &path, const QSize &size, const QColor &fg, 
 #endif
 #ifdef Q_OS_WIN
   if (!fg.isValid()) {
+    if (QImage shellIcon = renderShellNamespaceIcon(path, size); !shellIcon.isNull()) { return shellIcon; }
+
     SHFILEINFOW fileInfo = {};
     auto nativePath = path.toStdWString();
     if (SHGetFileInfoW(nativePath.c_str(), FILE_ATTRIBUTE_NORMAL, &fileInfo, sizeof(fileInfo),
                        SHGFI_ICON | SHGFI_LARGEICON)) {
-      QImage image = QImage::fromHICON(fileInfo.hIcon);
-      DestroyIcon(fileInfo.hIcon);
-      if (!image.isNull() && size.isValid()) {
-        qreal const dpr = qGuiApp->devicePixelRatio();
-        QSize const logicalSize(qCeil(size.width() / dpr), qCeil(size.height() / dpr));
-        image = image.scaled(logicalSize * dpr, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        image.setDevicePixelRatio(dpr);
-      }
+      QImage image = imageFromWindowsIcon(fileInfo.hIcon, size);
       return image;
     }
   }
