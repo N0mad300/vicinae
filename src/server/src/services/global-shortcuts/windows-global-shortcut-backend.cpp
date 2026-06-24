@@ -193,7 +193,9 @@ void WindowsGlobalShortcutBackend::unbindAll() {
   m_idByNativeId.clear();
 }
 
-bool WindowsGlobalShortcutBackend::nativeEventFilter(const QByteArray &, void *message, qintptr *) {
+bool WindowsGlobalShortcutBackend::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *) {
+  if (eventType != "windows_generic_MSG" && eventType != "windows_dispatcher_MSG") { return false; }
+
   auto *msg = static_cast<MSG *>(message);
   if (!msg || msg->message != WM_HOTKEY) { return false; }
 

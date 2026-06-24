@@ -70,9 +70,9 @@ QString executableNameKey(const fs::path &path) {
   return lowerKey(fromPath(path.filename()));
 }
 
-QString trimNullTerminated(const std::wstring &value) {
-  auto end = std::ranges::find(value, L'\0');
-  return QString::fromWCharArray(value.data(), static_cast<qsizetype>(std::distance(value.begin(), end)));
+QString trimNullTerminated(const wchar_t *value, size_t size) {
+  auto end = std::find(value, value + size, L'\0');
+  return QString::fromWCharArray(value, static_cast<qsizetype>(std::distance(value, end)));
 }
 
 std::optional<fs::path> knownFolder(REFKNOWNFOLDERID id) {
@@ -147,27 +147,27 @@ ShortcutInfo readShortcut(const fs::path &path) {
   if (FAILED(persistFile->Load(path.wstring().c_str(), STGM_READ))) { return info; }
 
   WIN32_FIND_DATAW findData = {};
-  std::wstring target(MAX_PATH * 8, L'\0');
+  std::array<wchar_t, (MAX_PATH * 8) + 1> target = {};
   if (SUCCEEDED(
-          shellLink->GetPath(target.data(), static_cast<int>(target.size()), &findData, SLGP_RAWPATH))) {
-    auto targetString = trimNullTerminated(target);
+          shellLink->GetPath(target.data(), static_cast<int>(target.size() - 1), &findData, SLGP_RAWPATH))) {
+    auto targetString = trimNullTerminated(target.data(), target.size());
     if (!targetString.isEmpty()) { info.targetPath = toPath(targetString); }
   }
 
-  std::wstring description(INFOTIPSIZE, L'\0');
-  if (SUCCEEDED(shellLink->GetDescription(description.data(), static_cast<int>(description.size())))) {
-    info.description = trimNullTerminated(description);
+  std::array<wchar_t, INFOTIPSIZE + 1> description = {};
+  if (SUCCEEDED(shellLink->GetDescription(description.data(), static_cast<int>(description.size() - 1)))) {
+    info.description = trimNullTerminated(description.data(), description.size());
   }
 
-  std::wstring arguments(INFOTIPSIZE, L'\0');
-  if (SUCCEEDED(shellLink->GetArguments(arguments.data(), static_cast<int>(arguments.size())))) {
-    info.arguments = trimNullTerminated(arguments);
+  std::array<wchar_t, INFOTIPSIZE + 1> arguments = {};
+  if (SUCCEEDED(shellLink->GetArguments(arguments.data(), static_cast<int>(arguments.size() - 1)))) {
+    info.arguments = trimNullTerminated(arguments.data(), arguments.size());
   }
 
-  std::wstring icon(MAX_PATH * 8, L'\0');
+  std::array<wchar_t, (MAX_PATH * 8) + 1> icon = {};
   int iconIndex = 0;
-  if (SUCCEEDED(shellLink->GetIconLocation(icon.data(), static_cast<int>(icon.size()), &iconIndex))) {
-    auto iconString = trimNullTerminated(icon);
+  if (SUCCEEDED(shellLink->GetIconLocation(icon.data(), static_cast<int>(icon.size() - 1), &iconIndex))) {
+    auto iconString = trimNullTerminated(icon.data(), icon.size());
     if (!iconString.isEmpty()) { info.iconPath = toPath(iconString); }
   }
 
@@ -295,12 +295,13 @@ std::optional<fs::path> executableForAssociation(const QString &association) {
       AssocQueryStringW(ASSOCF_VERIFY, ASSOCSTR_EXECUTABLE, assocW.c_str(), L"open", nullptr, &size);
   if (result != S_FALSE || size == 0) return std::nullopt;
 
-  std::wstring buffer(size, L'\0');
+  std::wstring buffer(size + 1, L'\0');
+  size = static_cast<DWORD>(buffer.size());
   result =
       AssocQueryStringW(ASSOCF_VERIFY, ASSOCSTR_EXECUTABLE, assocW.c_str(), L"open", buffer.data(), &size);
   if (FAILED(result)) return std::nullopt;
 
-  QString executable = trimNullTerminated(buffer);
+  QString executable = trimNullTerminated(buffer.data(), buffer.size());
   if (executable.isEmpty()) return std::nullopt;
   return toPath(executable);
 }
