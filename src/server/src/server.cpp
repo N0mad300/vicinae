@@ -98,7 +98,14 @@ int startServer(const ServerLaunchOptions &launchOpts) {
   // Cheap single-instance probe before building any Qt state. macOS spawns
   // a fresh process on every `open` of the .app; without this guard, each
   // launch would proceed and steal focus.
-  if (const auto sock = Omnicast::commandSocketPath(); std::filesystem::exists(sock)) {
+  const auto sock = Omnicast::commandSocketPath();
+#ifdef Q_OS_WIN
+  bool const shouldProbeExistingInstance = true;
+#else
+  bool const shouldProbeExistingInstance = std::filesystem::exists(sock);
+#endif
+
+  if (shouldProbeExistingInstance) {
     QLocalSocket probe;
     probe.connectToServer(QString::fromStdString(sock.string()));
     if (probe.waitForConnected(100)) {
@@ -306,7 +313,7 @@ int startServer(const ServerLaunchOptions &launchOpts) {
 
   IpcCommandServer commandServer(&ctx);
 
-  commandServer.start(Omnicast::commandSocketPath());
+  if (!commandServer.start(Omnicast::commandSocketPath())) { return 1; }
 
   QObject::connect(
       ctx.services->fileService()->indexer(), &AbstractFileIndexer::scanStatusChanged,

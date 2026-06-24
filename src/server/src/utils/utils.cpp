@@ -11,16 +11,26 @@
 #include <QColor>
 #include <QString>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <qrgb.h>
+#include <qtenvironmentvariables.h>
 
 namespace fs = std::filesystem;
 
 std::filesystem::path homeDir() {
-  const char *env = getenv("HOME");
+#ifdef Q_OS_WIN
+  constexpr const char *HOME_ENV_VAR = "USERPROFILE";
+#else
+  constexpr const char *HOME_ENV_VAR = "HOME";
+#endif
 
-  if (!env) return {};
+  const auto home = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+  if (!home.isEmpty()) return home.toStdString();
 
-  return env;
+  const auto platformHome = qEnvironmentVariable(HOME_ENV_VAR);
+  if (!platformHome.isEmpty()) return platformHome.toStdString();
+
+  return qEnvironmentVariable("HOME").toStdString();
 }
 
 fs::path compressPath(const fs::path &path) {

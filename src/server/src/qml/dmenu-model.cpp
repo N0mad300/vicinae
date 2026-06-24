@@ -11,6 +11,14 @@
 #include <ranges>
 #include <utility>
 
+namespace {
+
+std::filesystem::path pathFromEntry(std::string_view entry) {
+  return std::filesystem::path(std::string{entry});
+}
+
+} // namespace
+
 void DMenuSection::setRawEntries(std::vector<std::string_view> entries) {
   m_entries = std::move(entries);
   m_filtered.clear();
@@ -50,29 +58,28 @@ std::string_view DMenuSection::entryAt(int i) const {
 
 QString DMenuSection::itemTitle(int i) const {
   auto entry = entryAt(i);
-  if (entry.starts_with('/')) {
-    return QString::fromStdString(getLastPathComponent(std::filesystem::path(entry)));
-  }
+  auto path = pathFromEntry(entry);
+  if (path.is_absolute()) { return QString::fromStdString(getLastPathComponent(path)); }
   return QString::fromUtf8(entry.data(), entry.size());
 }
 
 QString DMenuSection::itemSubtitle(int i) const {
   if (!m_noQuickLook) return {};
   auto entry = entryAt(i);
-  if (entry.starts_with('/')) {
+  auto path = pathFromEntry(entry);
+  if (path.is_absolute()) {
     std::error_code ec;
-    if (std::filesystem::exists(entry, ec)) {
-      return QString::fromStdString(std::filesystem::path(entry).parent_path().string());
-    }
+    if (std::filesystem::exists(path, ec)) { return QString::fromStdString(path.parent_path().string()); }
   }
   return {};
 }
 
 QString DMenuSection::itemIconSource(int i) const {
   auto entry = entryAt(i);
-  if (entry.starts_with('/')) {
+  auto path = pathFromEntry(entry);
+  if (path.is_absolute()) {
     std::error_code ec;
-    if (std::filesystem::exists(entry, ec)) { return imageSourceFor(ImageURL::fileIcon(entry)); }
+    if (std::filesystem::exists(path, ec)) { return imageSourceFor(ImageURL::fileIcon(path)); }
   }
   return {};
 }
@@ -110,8 +117,9 @@ std::unique_ptr<ActionPanelState> DMenuSection::actionPanel(int i) const {
 void DMenuSection::onSelected(int i) {
   auto entry = entryAt(i);
   if (!entry.empty()) {
+    auto path = pathFromEntry(entry);
     std::error_code ec;
-    if (entry.starts_with('/') && std::filesystem::exists(entry, ec)) {
+    if (path.is_absolute() && std::filesystem::exists(path, ec)) {
       if (m_onFileHighlighted) m_onFileHighlighted(entry);
     }
   }

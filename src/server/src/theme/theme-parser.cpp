@@ -200,7 +200,7 @@ std::expected<ThemeFile::ParseResult, std::string> ThemeFile::fromFile(const fs:
       std::string const icon = ptr->value_or("");
       fs::path iconPath = icon;
 
-      if (!icon.starts_with('/')) { iconPath = path.parent_path() / icon; }
+      if (!iconPath.is_absolute()) { iconPath = path.parent_path() / iconPath; }
 
       data.icon = iconPath;
     }

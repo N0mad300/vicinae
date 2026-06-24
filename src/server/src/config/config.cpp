@@ -50,6 +50,12 @@ static constexpr const char *TOP_COMMENT =
 //
 // Learn more about configuration at https://docs.vicinae.com/config)";
 
+#ifdef Q_OS_WIN
+static constexpr char ENV_PATH_SEPARATOR = ';';
+#else
+static constexpr char ENV_PATH_SEPARATOR = ':';
+#endif
+
 template <typename T> T static merge(const auto &v1, const auto &v2) {
   auto fallback = [&]() -> T {
     if constexpr (std::is_convertible_v<std::decay_t<decltype(v1)>, T>) {
@@ -90,7 +96,8 @@ Manager::Manager(fs::path path) : m_userPath(std::move(path)) {
 
   m_defaultData = file.readAll().toStdString();
 
-  if (auto error = glz::read<glz::opts{.comments = true, .error_on_unknown_keys = false}>(m_defaultConfig, m_defaultData)) {
+  if (auto error = glz::read<glz::opts{.comments = true, .error_on_unknown_keys = false}>(m_defaultConfig,
+                                                                                          m_defaultData)) {
     throw std::runtime_error(
         std::format("Failed to parse default config file: {}", glz::format_error(error)));
   }
@@ -100,7 +107,7 @@ Manager::Manager(fs::path path) : m_userPath(std::move(path)) {
 
   if (const char *envOverrides = std::getenv("VICINAE_OVERRIDES")) {
     m_envOverrides =
-        std::string_view{envOverrides} | std::views::split(':') |
+        std::string_view{envOverrides} | std::views::split(ENV_PATH_SEPARATOR) |
         std::views::transform([](const auto &part) { return std::string{part.begin(), part.end()}; }) |
         std::ranges::to<std::vector<std::string>>();
 
@@ -237,9 +244,9 @@ void Manager::initConfig() {
 
 std::filesystem::path Manager::resolvePath(const std::filesystem::path &path,
                                            const std::filesystem::path &cwd) {
-  std::string importPath = expandPath(path).string();
+  fs::path importPath = expandPath(path);
 
-  if (!importPath.starts_with('/')) { importPath = (cwd.parent_path() / importPath).string(); }
+  if (!importPath.is_absolute()) { importPath = cwd.parent_path() / importPath; }
 
   return std::filesystem::weakly_canonical(importPath);
 }
@@ -352,7 +359,3 @@ void Manager::prunePartial(Partial<ConfigValue> &user) {
 }
 
 }; // namespace config
-
-
-
-

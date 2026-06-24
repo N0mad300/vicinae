@@ -6,4 +6,6 @@ public:
   bool isRunning(const AbstractApplication &) const override { return false; }
   std::shared_ptr<AbstractApplication> frontmostApp() const override { return nullptr; }
   bool activate(const AbstractApplication &) const override { return false; }
+  bool quit(const AbstractApplication &) const override { return false; }
+  bool forceQuit(const AbstractApplication &) const override { return false; }
 };
