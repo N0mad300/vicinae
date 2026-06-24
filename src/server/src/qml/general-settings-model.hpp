@@ -1,6 +1,8 @@
 #pragma once
 #include "config/config.hpp"
+#include "services/startup/startup-launch-service.hpp"
 #include "service-registry.hpp"
+#include <memory>
 #include <QObject>
 #include <QVariantList>
 
@@ -10,6 +12,8 @@ class GeneralSettingsModel : public QObject {
   Q_PROPERTY(bool searchFilesInRoot READ searchFilesInRoot WRITE setSearchFilesInRoot NOTIFY configChanged)
   Q_PROPERTY(bool inputServerEnabled READ inputServerEnabled WRITE setInputServerEnabled NOTIFY configChanged)
   Q_PROPERTY(bool closeOnFocusLoss READ closeOnFocusLoss WRITE setCloseOnFocusLoss NOTIFY configChanged)
+  Q_PROPERTY(bool launchAtStartupSupported READ launchAtStartupSupported CONSTANT)
+  Q_PROPERTY(bool launchAtStartup READ launchAtStartup WRITE setLaunchAtStartup NOTIFY launchAtStartupChanged)
   Q_PROPERTY(bool closeOnEscape READ closeOnEscape WRITE setCloseOnEscape NOTIFY configChanged)
   Q_PROPERTY(bool considerPreedit READ considerPreedit WRITE setConsiderPreedit NOTIFY configChanged)
   Q_PROPERTY(bool popToRootOnClose READ popToRootOnClose WRITE setPopToRootOnClose NOTIFY configChanged)
@@ -43,12 +47,16 @@ class GeneralSettingsModel : public QObject {
 
 signals:
   void configChanged();
+  void launchAtStartupChanged();
 
 public:
   explicit GeneralSettingsModel(QObject *parent = nullptr);
 
   bool searchFilesInRoot() const;
   void setSearchFilesInRoot(bool v);
+  bool launchAtStartupSupported() const;
+  bool launchAtStartup() const;
+  void setLaunchAtStartup(bool v);
   bool closeOnFocusLoss() const;
   void setCloseOnFocusLoss(bool v);
   bool closeOnEscape() const;
@@ -109,4 +117,5 @@ private:
   config::Manager &cfgManager() const;
 
   mutable QVariantList m_fontItems;
+  std::unique_ptr<StartupLaunchService> m_startupLaunchService;
 };

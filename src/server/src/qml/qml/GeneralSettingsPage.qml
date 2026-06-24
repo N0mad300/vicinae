@@ -44,6 +44,16 @@ Flickable {
             }
 
             SettingsRow {
+                visible: root.model.launchAtStartupSupported
+                label: "Launch at startup"
+                description: "Start Vicinae when you sign in."
+                SettingsToggle {
+                    checked: root.model.launchAtStartup
+                    onToggled: checked => root.model.launchAtStartup = checked
+                }
+            }
+
+            SettingsRow {
                 label: "Close on focus loss"
                 SettingsToggle {
                     checked: root.model.closeOnFocusLoss

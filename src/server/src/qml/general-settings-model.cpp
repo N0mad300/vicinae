@@ -2,6 +2,7 @@
 #include "config/config.hpp"
 #include "view-utils.hpp"
 #include "service-registry.hpp"
+#include "services/startup/startup-launch-service-factory.hpp"
 #include "theme.hpp"
 #include "theme/theme-file.hpp"
 #include "favicon/favicon-service.hpp"
@@ -12,7 +13,8 @@
 #include <QGuiApplication>
 #include <QIcon>
 
-GeneralSettingsModel::GeneralSettingsModel(QObject *parent) : QObject(parent) {
+GeneralSettingsModel::GeneralSettingsModel(QObject *parent)
+    : QObject(parent), m_startupLaunchService(createStartupLaunchService()) {
   connect(ServiceRegistry::instance()->config(), &config::Manager::configChanged, this,
           &GeneralSettingsModel::configChanged);
 }
@@ -26,6 +28,19 @@ config::Manager &GeneralSettingsModel::cfgManager() const { return *ServiceRegis
 bool GeneralSettingsModel::searchFilesInRoot() const { return cfg().searchFilesInRoot; }
 void GeneralSettingsModel::setSearchFilesInRoot(bool v) {
   cfgManager().mergeWithUser({.searchFilesInRoot = v});
+}
+
+bool GeneralSettingsModel::launchAtStartupSupported() const {
+  return m_startupLaunchService && m_startupLaunchService->isSupported();
+}
+
+bool GeneralSettingsModel::launchAtStartup() const {
+  return m_startupLaunchService && m_startupLaunchService->isEnabled();
+}
+
+void GeneralSettingsModel::setLaunchAtStartup(bool v) {
+  if (!m_startupLaunchService || !m_startupLaunchService->isSupported()) { return; }
+  if (m_startupLaunchService->setEnabled(v)) { emit launchAtStartupChanged(); }
 }
 
 bool GeneralSettingsModel::closeOnFocusLoss() const { return cfg().closeOnFocusLoss; }

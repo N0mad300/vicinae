@@ -652,6 +652,10 @@ if(WIN32)
 		src/services/app-service/windows/windows-app.cpp
 		src/services/app-service/windows/windows-app-database.hpp
 		src/services/app-service/windows/windows-app-database.cpp
+		src/services/global-shortcuts/windows-global-shortcut-backend.hpp
+		src/services/global-shortcuts/windows-global-shortcut-backend.cpp
+		src/services/startup/windows-startup-launch-service.hpp
+		src/services/startup/windows-startup-launch-service.cpp
 	)
 	list(APPEND LIBS Ole32 Shell32 Shlwapi)
 endif()
@@ -674,6 +678,10 @@ list(APPEND SRCS
 	src/services/global-shortcuts/global-shortcut-backend-factory.cpp
 	src/services/global-shortcuts/global-shortcut-service.hpp
 	src/services/global-shortcuts/global-shortcut-service.cpp
+	src/services/startup/dummy-startup-launch-service.hpp
+	src/services/startup/startup-launch-service.hpp
+	src/services/startup/startup-launch-service-factory.hpp
+	src/services/startup/startup-launch-service-factory.cpp
 )
 
 list(APPEND SRCS
