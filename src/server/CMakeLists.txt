@@ -936,6 +936,7 @@ set(VICINAE_QML_FILES
 	src/qml/qml/SettingsPreferenceForm.qml
 	src/qml/qml/MissingPreferenceView.qml
 	src/qml/qml/OAuthOverlayView.qml
+	src/qml/qml/HudWindow.qml
 )
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -944,7 +945,7 @@ endif()
 
 if(WAYLAND_LAYER_SHELL AND UNIX AND NOT APPLE)
 	list(APPEND VICINAE_QML_FILES src/qml/qml/LauncherWindowLayerShell.qml)
-	list(APPEND VICINAE_QML_FILES src/qml/qml/HudWindow.qml)
+	list(APPEND VICINAE_QML_FILES src/qml/qml/HudWindowLayerShell.qml)
 endif()
 
 if(APPLE)
@@ -1056,5 +1057,3 @@ if (BUILD_TESTS AND UNIX AND NOT APPLE AND VICINAE_ENABLE_QALCULATE)
 	target_link_libraries(${TEST_TARGET} PRIVATE Catch2::Catch2WithMain Qt6::Core Qt6::Gui)
 	target_compile_features(${TEST_TARGET} PUBLIC cxx_std_23)
 endif()
-
-
