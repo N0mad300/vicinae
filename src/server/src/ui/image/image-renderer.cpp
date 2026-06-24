@@ -10,6 +10,13 @@
 #ifdef Q_OS_MACOS
 #include "ui/image/mac-file-icon-loader.hpp"
 #endif
+#ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+#include <shellapi.h>
+#endif
 #include <QBuffer>
 #include <QCoreApplication>
 #include <QFontMetricsF>
@@ -191,6 +198,24 @@ QImage renderFileIcon(const QString &path, const QSize &size, const QColor &fg, 
 #ifdef Q_OS_MACOS
   if (!fg.isValid()) {
     if (QImage native = renderMacFileIcon(path, size); !native.isNull()) { return native; }
+  }
+#endif
+#ifdef Q_OS_WIN
+  if (!fg.isValid()) {
+    SHFILEINFOW fileInfo = {};
+    auto nativePath = path.toStdWString();
+    if (SHGetFileInfoW(nativePath.c_str(), FILE_ATTRIBUTE_NORMAL, &fileInfo, sizeof(fileInfo),
+                       SHGFI_ICON | SHGFI_LARGEICON)) {
+      QImage image = QImage::fromHICON(fileInfo.hIcon);
+      DestroyIcon(fileInfo.hIcon);
+      if (!image.isNull() && size.isValid()) {
+        qreal const dpr = qGuiApp->devicePixelRatio();
+        QSize const logicalSize(qCeil(size.width() / dpr), qCeil(size.height() / dpr));
+        image = image.scaled(logicalSize * dpr, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        image.setDevicePixelRatio(dpr);
+      }
+      return image;
+    }
   }
 #endif
 

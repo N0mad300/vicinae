@@ -646,6 +646,16 @@ else()
 	)
 endif()
 
+if(WIN32)
+	list(APPEND SRCS
+		src/services/app-service/windows/windows-app.hpp
+		src/services/app-service/windows/windows-app.cpp
+		src/services/app-service/windows/windows-app-database.hpp
+		src/services/app-service/windows/windows-app-database.cpp
+	)
+	list(APPEND LIBS Ole32 Shell32 Shlwapi)
+endif()
+
 list(APPEND SRCS
 	src/services/app-runtime/abstract-app-runtime.hpp
 	src/services/app-runtime/app-runtime.hpp
